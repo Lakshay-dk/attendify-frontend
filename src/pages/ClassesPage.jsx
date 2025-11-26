@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from "react-router-dom";  // ✅ NEW
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
 
 const ClassesPage = () => {
-  const navigate = useNavigate();  // ✅ NEW
+  const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
   const [classes, setClasses] = useState([]);
@@ -17,7 +17,7 @@ const ClassesPage = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [activeSession, setActiveSession] = useState(null);
-  const [sessionDuration, setSessionDuration] = useState(60); // minutes
+  const [sessionDuration, setSessionDuration] = useState(60);
 
   useEffect(() => {
     fetchClasses();
@@ -62,24 +62,25 @@ const ClassesPage = () => {
   const handleGenerateQR = async (classId) => {
     try {
       setActiveSession(classId);
-      const res = await api.post('/sessions/generate', {
+      await api.post('/sessions/generate', {
         classId,
         lectureTiming: new Date().toLocaleTimeString(),
         durationMinutes: sessionDuration,
       });
+
       alert('QR Code generated! Students can now scan to mark attendance.');
-      
-      // Show QR active message for 5 minutes
+
       setTimeout(() => setActiveSession(null), 300000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to generate QR');
     }
   };
 
-  if (!user || user.role !== 'admin') {
+  // ✅ FIXED — allow teacher + admin
+  if (!user || !['teacher', 'admin'].includes(user.role)) {
     return (
       <div className="p-8 text-center">
-        <p className="text-red-600 text-lg">Access Denied. Only teachers can manage classes.</p>
+        <p className="text-red-600 text-lg">Access Denied. Only teachers/admins can manage classes.</p>
       </div>
     );
   }
@@ -205,7 +206,7 @@ const ClassesPage = () => {
                     {activeSession === cls._id ? '✓ QR Active' : '🔲 Generate QR Code'}
                   </button>
 
-                  {/* ✅ VIEW LIVE QR BUTTON */}
+                  {/* VIEW LIVE QR BUTTON */}
                   <button
                     onClick={() => navigate(`/teacher/live/${cls._id}`)}
                     className="w-full bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded transition text-sm font-semibold"
