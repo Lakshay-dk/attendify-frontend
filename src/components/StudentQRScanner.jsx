@@ -1,82 +1,158 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useRef, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import api from "../utils/api";
+import Webcam from "react-webcam";
+import QrScanner from "qr-scanner";
 
-const StudentQRScanner = ({ sessionId }) => {
+const StudentQRScanner = ({ onClose, onMarked }) => {
   const { user } = useContext(AuthContext);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const webcamRef = useRef(null);
+  const scanIntervalRef = useRef(null);
 
-  // Simulated scan handler
-  const handleSimulateScan = async () => {
-    if (!sessionId) {
-      setMessage("No active session to scan.");
-      return;
+  // Start scanning loop
+  const startScanning = () => {
+    setMessage("");
+    setScanning(true);
+    // capture every 900ms
+    scanIntervalRef.current = setInterval(captureAndScan, 900);
+  };
+
+  const stopScanning = () => {
+    setScanning(false);
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
     }
+  };
 
+  useEffect(() => {
+    // cleanup on unmount
+    return () => stopScanning();
+  }, []);
+
+  const captureAndScan = async () => {
+    if (!webcamRef.current) return;
+    const screenshot = webcamRef.current.getScreenshot();
+    if (!screenshot) return;
+
+    try {
+      // QrScanner.scanImage accepts dataURL
+      const result = await QrScanner.scanImage(screenshot, { returnDetailedScanResult: false });
+      if (result) {
+        // stop further scanning
+        stopScanning();
+        await handleScanned(result);
+      }
+    } catch (err) {
+      // no QR found in this frame - ignore
+    }
+  };
+
+  const handleScanned = async (scannedText) => {
     setLoading(true);
     setMessage("");
     try {
-      const res = await api.post("/attendance/mark", { sessionId });
+      // Send scanned text as sessionId (server expects sessionId string)
+      const res = await api.post("/attendance/mark", { sessionId: scannedText });
       setMessage(res.data.message || "Attendance marked successfully");
+      if (onMarked) onMarked(res.data);
     } catch (err) {
-      setMessage(
-        err.response?.data?.message ||
-          "Error marking attendance. Please try again."
-      );
+      setMessage(err.response?.data?.message || "Error marking attendance. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Tooltip for dev button
-  const devTooltip = "Use this only for laptop development testing";
+  // Simulated scan fallback (for desktop)
+  const handleSimulateScan = async () => {
+    setLoading(true);
+    setMessage("");
+    try {
+      if (!user?.classId) {
+        setMessage("No class/session available to mark.");
+        return;
+      }
+      // Try to mark using active session from server by asking for active session
+      const active = await api.get(`/sessions/active/${user.classId}`);
+      const sessionId = active.data?.sessionId;
+      if (!sessionId) {
+        setMessage("No active session to mark.");
+        return;
+      }
+      const res = await api.post("/attendance/mark", { sessionId });
+      setMessage(res.data.message || "Attendance marked successfully");
+      if (onMarked) onMarked(res.data);
+    } catch (err) {
+      setMessage(err.response?.data?.message || "Failed to simulate scan.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      {/* ...existing QR scan UI (camera) can go here if needed... */}
+    <div className="w-full">
+      <div className="flex flex-col items-center gap-4">
+        {!scanning ? (
+          <div className="flex gap-3">
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded"
+              onClick={startScanning}
+            >
+              Open Camera
+            </button>
+            <button
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded"
+              onClick={handleSimulateScan}
+              disabled={loading}
+            >
+              Simulate Scan
+            </button>
+            <button
+              className="bg-red-100 text-red-700 px-4 py-2 rounded"
+              onClick={() => { stopScanning(); if (onClose) onClose(); }}
+            >
+              Close
+            </button>
+          </div>
+        ) : (
+          <div className="w-full flex flex-col items-center gap-3">
+            <div className="w-full max-w-md bg-black rounded overflow-hidden">
+              <Webcam
+                audio={false}
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                videoConstraints={{ facingMode: "environment" }}
+                className="w-full h-auto"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                className="bg-red-500 text-white px-4 py-2 rounded"
+                onClick={() => { stopScanning(); }}
+              >
+                Stop Camera
+              </button>
+              <button
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded"
+                onClick={() => { stopScanning(); if (onClose) onClose(); }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
 
-      {/* Simulate Scan Button (always available in this build) */}
-      <button
-        type="button"
-        className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg border border-dashed border-gray-400 mt-4 hover:bg-gray-300 transition relative"
-        style={{ position: "relative" }}
-        onClick={handleSimulateScan}
-        disabled={loading}
-        title={devTooltip}
-      >
-        Simulate Scan
-        <span
-          style={{
-            position: "absolute",
-            top: "-1.5rem",
-            left: "50%",
-            transform: "translateX(-50%)",
-            fontSize: "0.85rem",
-            color: "#6b7280",
-            background: "#f3f4f6",
-            padding: "2px 8px",
-            borderRadius: "6px",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {devTooltip}
-        </span>
-      </button>
+        {loading && <div className="text-sm text-gray-600">Processing...</div>}
 
-      {/* Response Message */}
-      {message && (
-        <div
-          className={`mt-4 px-4 py-2 rounded ${
-            message.toLowerCase().includes("success")
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700"
-          }`}
-        >
-          {message}
-        </div>
-      )}
+        {message && (
+          <div className={`mt-2 px-4 py-2 rounded ${message.toLowerCase().includes("success") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+            {message}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

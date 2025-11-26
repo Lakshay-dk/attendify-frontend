@@ -105,16 +105,13 @@ const StudentDashboard = () => {
   };
 
   const markAttendance = async (sessionId) => {
+    // kept for compatibility if direct marking is needed elsewhere
     try {
-      setScanning(true);
       await api.post('/attendance/mark', { sessionId });
-      // Refresh data after marking
       await fetchStudentData(selectedClassId);
       setError('');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to mark attendance. Session may have expired.');
-    } finally {
-      setScanning(false);
     }
   };
 
@@ -195,15 +192,25 @@ const StudentDashboard = () => {
               )}
 
               <button
-                onClick={() => markAttendance(activeSession.sessionId)}
+                onClick={() => setScanning(true)}
                 disabled={scanning}
                 className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-8 py-3 rounded-lg font-bold transition"
               >
-                {scanning ? 'Marking...' : '📱 Mark Attendance'}
+                {scanning ? 'Opening camera...' : '📱 Mark Attendance'}
               </button>
 
-              {/* Simulated Scan Mode (Dev Only) */}
-              <StudentQRScanner sessionId={activeSession?.sessionId} />
+              {/* Camera scanner opens when `scanning` is true. */}
+              {scanning && (
+                <div className="mt-6">
+                  <StudentQRScanner
+                    onClose={() => setScanning(false)}
+                    onMarked={async () => {
+                      setScanning(false);
+                      await fetchStudentData(selectedClassId);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </>
         ) : (
