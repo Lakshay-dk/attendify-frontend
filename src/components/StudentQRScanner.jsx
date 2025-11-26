@@ -44,10 +44,19 @@ const StudentQRScanner = ({ onClose, onMarked }) => {
       if (result) {
         // stop further scanning
         stopScanning();
-        await handleScanned(result);
+        // normalize result: library may return a string or a detailed object
+        let scannedText = '';
+        if (typeof result === 'string') scannedText = result;
+        else if (result?.data) scannedText = result.data;
+        else if (result?.rawValue) scannedText = result.rawValue;
+        else if (result?.text) scannedText = result.text;
+        else scannedText = String(result || '');
+
+        await handleScanned(scannedText);
       }
     } catch (err) {
-      // no QR found in this frame - ignore
+      // no QR found in this frame - ignore, but log unexpected errors
+      console.debug('QR scan frame did not produce a result or failed:', err?.message || err);
     }
   };
 
@@ -55,12 +64,18 @@ const StudentQRScanner = ({ onClose, onMarked }) => {
     setLoading(true);
     setMessage("");
     try {
+      if (!scannedText || typeof scannedText !== 'string' || scannedText.trim() === '') {
+        setMessage('Scanned QR did not contain recognizable data. Try again.');
+        return;
+      }
+
       // Send scanned text as sessionId (server expects sessionId string)
-      const res = await api.post("/attendance/mark", { sessionId: scannedText });
-      setMessage(res.data.message || "Attendance marked successfully");
+      const res = await api.post('/attendance/mark', { sessionId: scannedText });
+      setMessage(res.data.message || 'Attendance marked successfully');
       if (onMarked) onMarked(res.data);
     } catch (err) {
-      setMessage(err.response?.data?.message || "Error marking attendance. Please try again.");
+      console.error('Error while marking attendance:', err);
+      setMessage(err.response?.data?.message || 'Error marking attendance. Please try again.');
     } finally {
       setLoading(false);
     }
