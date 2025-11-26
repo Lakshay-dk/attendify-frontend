@@ -1,68 +1,49 @@
-import React, { useEffect, useState, useContext, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import api from "../utils/api";
-import { AuthContext } from "../context/AuthContext";
 
 const LiveSession = () => {
   const { classId } = useParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useContext(AuthContext);
 
-  const [qrImage, setQrImage] = useState(null);
-  const [expiresAt, setExpiresAt] = useState(null);
-  const [classDetails, setClassDetails] = useState(null);
+  const [qrData, setQrData] = useState(null);
+  const [expiresIn, setExpiresIn] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const countdownRef = useRef(null);
-  const [secondsLeft, setSecondsLeft] = useState(0);
 
   const fetchQR = async () => {
     try {
       setError("");
-      const res = await api.get(`/attendance/live-qr/${classId}`);
-      if (!res.data?.qrImage) {
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/attendance/qr/${classId}`
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to load QR");
+      }
+
+      const data = await res.json();
+
+      if (!data.qrImage) {
         throw new Error("No active session found");
       }
-      setQrImage(res.data.qrImage);
-      setExpiresAt(res.data.expiresAt ? new Date(res.data.expiresAt) : null);
-      setClassDetails(res.data.classDetails || null);
+
+      setQrData(data.qrImage);
+      setExpiresIn(data.expiresIn);
       setLoading(false);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Could not fetch QR");
-      setQrImage(null);
-      setExpiresAt(null);
-      setClassDetails(null);
+      setError(err.message || "Could not fetch QR");
+      setQrData(null);
       setLoading(false);
     }
   };
 
+  // Fetch QR & refresh every 5 seconds
   useEffect(() => {
-    if (authLoading) return; // wait for auth state
-    const isTeacher = user && (user.role === "admin" || user.role === "teacher");
-    if (!isTeacher) {
-      navigate("/dashboard");
-      return;
-    }
     fetchQR();
-    const refresh = setInterval(fetchQR, 30000);
-    return () => clearInterval(refresh);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user, classId]);
-
-  useEffect(() => {
-    if (!expiresAt) {
-      setSecondsLeft(0);
-      return;
-    }
-    countdownRef.current && clearInterval(countdownRef.current);
-    const tick = () => {
-      const diff = Math.max(0, expiresAt.getTime() - Date.now());
-      setSecondsLeft(Math.floor(diff / 1000));
-    };
-    tick();
-    countdownRef.current = setInterval(tick, 1000);
-    return () => countdownRef.current && clearInterval(countdownRef.current);
-  }, [expiresAt]);
+    const interval = setInterval(fetchQR, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex flex-col justify-center items-center h-screen bg-gray-100 px-4">
@@ -79,18 +60,18 @@ const LiveSession = () => {
       )}
 
       {/* QR Code */}
-      {!loading && !error && qrImage && (
+      {!loading && !error && qrData && (
         <>
           <img
-            src={qrImage}
+            src={qrData}
             alt="Live QR"
             className="w-64 h-64 border shadow-xl rounded-lg bg-white"
           />
 
           {/* Expiry timer */}
-          {secondsLeft > 0 ? (
+          {expiresIn > 0 ? (
             <p className="mt-4 text-lg font-medium text-gray-700">
-              Expires in: <span className="text-red-600">{secondsLeft} seconds</span>
+              Expires in: <span className="text-red-600">{expiresIn} seconds</span>
             </p>
           ) : (
             <p className="mt-4 text-lg font-medium text-red-600">

@@ -1,32 +1,37 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import api from "../utils/api";
 
-// 1️⃣ Create context
+// Create context
 export const AuthContext = createContext();
 
-// 2️⃣ Provider wrapper
+// Provider
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user from localStorage on component mount
+  // Load user from localStorage on mount
   useEffect(() => {
     const loadUserFromStorage = () => {
       try {
-        const token = localStorage.getItem('token');
-        const userData = localStorage.getItem('user');
-        
+        const token = localStorage.getItem("token");
+        const userData = localStorage.getItem("user");
+
         if (token && userData) {
           const parsedUser = JSON.parse(userData);
+
+          // Ensure important fields exist
           parsedUser.classes = parsedUser.classes || [];
+          parsedUser.role = parsedUser.role || "student";
+
           setUser(parsedUser);
-          // Set the token in the API default headers
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+          // Attach token to Axios
+          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
         }
-      } catch (error) {
-        console.error('Error loading user from storage:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+      } catch (err) {
+        console.error("Error reading user from storage:", err);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       } finally {
         setLoading(false);
       }
@@ -35,9 +40,11 @@ export const AuthProvider = ({ children }) => {
     loadUserFromStorage();
   }, []);
 
+  // Login function
   const login = async (email, password) => {
     try {
-      const res = await api.post('/auth/login', { email, password });
+      const res = await api.post("/auth/login", { email, password });
+
       const userData = {
         _id: res.data._id,
         name: res.data.name,
@@ -47,19 +54,34 @@ export const AuthProvider = ({ children }) => {
         classes: res.data.classes || [],
         enrollmentNumber: res.data.enrollmentNumber || null,
       };
+
       setUser(userData);
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+
+      // Save token + user
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(userData));
+
+      // Attach token to Axios
+      api.defaults.headers.common["Authorization"] = `Bearer ${res.data.token}`;
+
       return userData;
     } catch (error) {
-      throw error.response?.data?.message || 'Login failed';
+      const errorMessage =
+        error.response?.data?.message || "Login failed. Please try again.";
+      throw new Error(errorMessage);
     }
   };
 
-  const register = async (name, email, password, role = 'student') => {
+  // Register function
+  const register = async (name, email, password, role = "student") => {
     try {
-      const res = await api.post('/auth/register', { name, email, password, role });
+      const res = await api.post("/auth/register", {
+        name,
+        email,
+        password,
+        role,
+      });
+
       const userData = {
         _id: res.data._id,
         name: res.data.name,
@@ -69,21 +91,31 @@ export const AuthProvider = ({ children }) => {
         classes: res.data.classes || [],
         enrollmentNumber: res.data.enrollmentNumber || null,
       };
+
       setUser(userData);
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+
+      // Save token + user
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(userData));
+
+      // Attach token to Axios
+      api.defaults.headers.common["Authorization"] = `Bearer ${res.data.token}`;
+
       return userData;
     } catch (error) {
-      throw error.response?.data?.message || 'Registration failed';
+      const errorMessage =
+        error.response?.data?.message ||
+        "Registration failed. Please try again.";
+      throw new Error(errorMessage);
     }
   };
 
+  // Logout
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    delete api.defaults.headers.common['Authorization'];
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    delete api.defaults.headers.common["Authorization"];
   };
 
   return (
@@ -93,7 +125,5 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// 3️⃣ Custom hook (optional but used in some files)
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+// Custom hook
+export const useAuth = () => useContext(AuthContext);
