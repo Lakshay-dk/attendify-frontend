@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from "react-router-dom";  // ✅ NEW
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
 
 const ClassesPage = () => {
+  const navigate = useNavigate();  // ✅ NEW
   const { user } = useContext(AuthContext);
+
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -66,8 +68,9 @@ const ClassesPage = () => {
         durationMinutes: sessionDuration,
       });
       alert('QR Code generated! Students can now scan to mark attendance.');
-      // Show QR for some time
-      setTimeout(() => setActiveSession(null), 300000); // 5 minutes
+      
+      // Show QR active message for 5 minutes
+      setTimeout(() => setActiveSession(null), 300000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to generate QR');
     }
@@ -85,6 +88,7 @@ const ClassesPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">My Classes</h1>
         <button
@@ -108,9 +112,7 @@ const ClassesPage = () => {
           <form onSubmit={handleCreateClass}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Class Name *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Class Name *</label>
                 <input
                   type="text"
                   name="name"
@@ -122,9 +124,7 @@ const ClassesPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                 <input
                   type="text"
                   name="description"
@@ -135,6 +135,7 @@ const ClassesPage = () => {
                 />
               </div>
             </div>
+
             <button
               type="submit"
               disabled={submitting}
@@ -154,7 +155,10 @@ const ClassesPage = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {classes.map((cls) => (
-            <div key={cls._id} className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
+            <div
+              key={cls._id}
+              className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden"
+            >
               <div className="bg-gradient-to-r from-purple-500 to-blue-500 text-white p-6">
                 <h3 className="text-2xl font-bold">{cls.name}</h3>
                 <p className="text-purple-100 mt-2">{cls.description}</p>
@@ -191,12 +195,22 @@ const ClassesPage = () => {
                 )}
 
                 <div className="space-y-2">
+
+                  {/* Generate QR Button */}
                   <button
                     onClick={() => handleGenerateQR(cls._id)}
                     disabled={activeSession === cls._id}
                     className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 text-white px-4 py-2 rounded transition text-sm font-semibold"
                   >
                     {activeSession === cls._id ? '✓ QR Active' : '🔲 Generate QR Code'}
+                  </button>
+
+                  {/* ✅ VIEW LIVE QR BUTTON */}
+                  <button
+                    onClick={() => navigate(`/teacher/live/${cls._id}`)}
+                    className="w-full bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded transition text-sm font-semibold"
+                  >
+                    📡 View Live QR
                   </button>
 
                   <a
@@ -212,12 +226,14 @@ const ClassesPage = () => {
                   >
                     ➕ Add Students
                   </a>
+
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
     </div>
   );
 };

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from "react-router-dom";   // ✅ NEW
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
 
 const TeacherDashboard = () => {
+  const navigate = useNavigate();   // ✅ NEW
   const { user } = useContext(AuthContext);
   const [stats, setStats] = useState(null);
   const [classes, setClasses] = useState([]);
@@ -18,11 +19,9 @@ const TeacherDashboard = () => {
   const fetchTeacherData = async () => {
     try {
       setLoading(true);
-      // Fetch teacher's classes
       const classRes = await api.get('/classes');
       setClasses(classRes.data);
       
-      // If classes exist, fetch stats for first class
       if (classRes.data.length > 0) {
         setSelectedClass(classRes.data[0]._id);
         await fetchStats(classRes.data[0]._id);
@@ -77,6 +76,15 @@ const TeacherDashboard = () => {
               </option>
             ))}
           </select>
+
+          {/* ✅ NEW BUTTON — View Live QR */}
+          <button
+            disabled={!selectedClass}
+            onClick={() => navigate(`/teacher/live/${selectedClass}`)}
+            className="mt-4 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg transition disabled:bg-gray-400"
+          >
+            📡 View Live QR
+          </button>
         </div>
       )}
 
@@ -117,19 +125,12 @@ const TeacherDashboard = () => {
 
       {/* Action Buttons */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <a
-          href="/classes"
-          className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 transition"
-        >
+        <a href="/classes" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 transition">
           📚 Manage Classes
         </a>
-        <a
-          href="/students"
-          className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 transition"
-        >
+        <a href="/students" className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 transition">
           👥 Manage Students
         </a>
-          {/* Reports section removed */}
       </div>
 
       {/* Recent Attendance Logs */}

@@ -10,8 +10,7 @@ import StudentsPage from './pages/StudentsPage';
 import ClassesPage from './pages/ClassesPage';
 import AddStudentsPage from './pages/AddStudentsPage';
 import GenerateQRPage from './pages/GenerateQRPage';
-import LiveSession from './pages/LiveSession';
-// ...existing code...
+import LiveSession from './pages/LiveSession';  // ✅ Added import
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -41,18 +40,60 @@ function App() {
       <Router>
         <div className="App">
           <Navbar />
+
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-            <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-            <Route path="/classes" element={<ProtectedRoute><ClassesPage /></ProtectedRoute>} />
-            <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
-            <Route path="/add-students" element={<ProtectedRoute><AddStudentsPage /></ProtectedRoute>} />
-            <Route path="/generate-qr" element={<ProtectedRoute><GenerateQRPage /></ProtectedRoute>} />
-            <Route path="/teacher/live/:classId" element={<ProtectedRoute><LiveSession /></ProtectedRoute>} />
-            {/* AttendanceReportPage routes removed */}
+
+            <Route path="/login" element={
+              <PublicRoute>
+                <LoginPage />
+              </PublicRoute>
+            } />
+
+            <Route path="/register" element={
+              <PublicRoute>
+                <RegisterPage />
+              </PublicRoute>
+            } />
+
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/classes" element={
+              <ProtectedRoute>
+                <ClassesPage />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/students" element={
+              <ProtectedRoute>
+                <StudentsPage />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/add-students" element={
+              <ProtectedRoute>
+                <AddStudentsPage />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/generate-qr" element={
+              <ProtectedRoute>
+                <GenerateQRPage />
+              </ProtectedRoute>
+            } />
+
+            {/* ✅ NEW ROUTE ADDED FOR TEACHER LIVE QR PAGE */}
+            <Route path="/teacher/live/:classId" element={
+              <ProtectedRoute>
+                <LiveSession />
+              </ProtectedRoute>
+            } />
           </Routes>
+
         </div>
       </Router>
     </AuthProvider>
