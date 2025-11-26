@@ -1,9 +1,11 @@
 import { useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
 
 const GenerateQRPage = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [lectureTiming, setLectureTiming] = useState('');
@@ -61,6 +63,10 @@ const GenerateQRPage = () => {
       setQrCode(res.data.qrCode);
       setSessionData(res.data);
       setLectureTiming('');
+        // Redirect teacher to live session page for this class so they see the same QR
+        if (selectedClass) {
+          navigate(`/teacher/live/${selectedClass}`);
+        }
     } catch (error) {
       const errorMessage = error.response?.data?.message || error.message || 'Failed to generate session QR';
       setError(errorMessage);
