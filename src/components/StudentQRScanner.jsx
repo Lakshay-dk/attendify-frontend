@@ -69,8 +69,20 @@ const StudentQRScanner = ({ onClose, onMarked }) => {
         return;
       }
 
-      // Send scanned text as sessionId (server expects sessionId string)
-      const res = await api.post('/attendance/mark', { sessionId: scannedText });
+      // The QR payload may be a JSON string (the server writes { sessionId, classId, ... })
+      // If so, parse and extract the sessionId field. Otherwise use the raw string.
+      let sessionIdToSend = scannedText;
+      try {
+        const parsed = JSON.parse(scannedText);
+        if (parsed && typeof parsed === 'object' && parsed.sessionId) {
+          sessionIdToSend = parsed.sessionId;
+        }
+      } catch (e) {
+        // not JSON, proceed with raw scannedText
+      }
+
+      // Send the sessionId string to backend (server expects the sessionId value)
+      const res = await api.post('/attendance/mark', { sessionId: sessionIdToSend });
       setMessage(res.data.message || 'Attendance marked successfully');
       if (onMarked) onMarked(res.data);
     } catch (err) {

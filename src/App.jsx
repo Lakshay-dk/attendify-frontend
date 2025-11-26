@@ -10,6 +10,7 @@ import StudentsPage from './pages/StudentsPage';
 import ClassesPage from './pages/ClassesPage';
 import AddStudentsPage from './pages/AddStudentsPage';
 import GenerateQRPage from './pages/GenerateQRPage';
+import LiveSession from './pages/LiveSession';
 // ...existing code...
 
 // Protected Route Component
@@ -49,6 +50,7 @@ function App() {
             <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
             <Route path="/add-students" element={<ProtectedRoute><AddStudentsPage /></ProtectedRoute>} />
             <Route path="/generate-qr" element={<ProtectedRoute><GenerateQRPage /></ProtectedRoute>} />
+            <Route path="/teacher/live/:classId" element={<ProtectedRoute><LiveSession /></ProtectedRoute>} />
             {/* AttendanceReportPage routes removed */}
           </Routes>
         </div>
